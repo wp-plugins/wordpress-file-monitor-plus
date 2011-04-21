@@ -4,7 +4,7 @@ Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
 Tested up to: 3.1.1
-Stable tag: 1.0
+Stable tag: 1.1
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -32,9 +32,18 @@ Monitors your WordPress installation for added/deleted/changed files.  When a ch
 
 == Frequently Asked Questions ==
 
+= I don't think the plugin is working. What should I do? =
+
+[Enable debuging mode in WordPress] and run the plugin and see if any errors are reported from the plugin. If you find errors and don't know how to fix head over to the [WordPress forums]
+
+[Enable debuging mode in WordPress]: http://codex.wordpress.org/Editing_wp-config.php#Debug
+[WordPress forums]: http://wordpress.org/tags/wordpress-file-monitor-plus?forum_id=10
+
 = Only admins can see the admin alert. Is it possible to let other user roles see the admin notice? =
 
-Yes you can, add the following code to your wp-config.php file: `define('SC_WPFMP_ADMIN_ALERT_PERMISSION', 'capability');` and change the capability to a level you want. Please visit http://codex.wordpress.org/Roles_and_Capabilities to see all available capabilities that you can set to.
+Yes you can, add the following code to your wp-config.php file: `define('SC_WPFMP_ADMIN_ALERT_PERMISSION', 'capability');` and change the capability to a level you want. Please visit [Roles and Capabilities] to see all available capabilities that you can set to.
+
+[Roles and Capabilities]: http://codex.wordpress.org/Roles_and_Capabilities
 
 = My website has error_log files that are always changing. How do I get WPFMP to ignore them? =
 
@@ -48,6 +57,13 @@ Each of the settings 'File Names To Ignore/Dir Names To Ignore/Exact Files To Ig
 
 What this does is stops WordPress from running the 'File Check Scan' on the built in cron scheduler and allows you to run it externally. If you know how to setup a cron externally its recommended that you use this method because scans can take up to 10 seconds and longer. If you rely on the WordPress cron then a vistor may land on your site when the file scan is scheduled to run and the user will have to end up waiting for the scan to finish checking. Waiting for 10 seconds or even longer for a page to load is not great for your visitors.
 
+= I'm getting the error [Got a packet bigger than 'max_allowed_packet' bytes] =
+
+This is due to the scan data being too large to insert into the DB at once. There is one of three things you can do to rectify:
+1. Change the `Data Save Method` to `file` instead of `database`. 
+2. Reduce the number of `File Check Methods` down to one. I'd recommend you just use `Date Modified` or `File Hash`. 
+3. Make a request to your webhost to increase the MySQL `max_allowed_packet` to a larger value. 
+
 == Screenshots ==
 
 1. Settings page
@@ -56,6 +72,9 @@ What this does is stops WordPress from running the 'File Check Scan' on the buil
 4. Email changed files report
 
 == Changelog ==
+
+= 1.1 =
+* Added setting to be able to save scan data and admin alert content to file rather than the database
 
 = 1.0 =
 * Initial release
