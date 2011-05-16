@@ -32,4 +32,11 @@ jQuery(function ($) {
 			$('#sc_wpfmp_from_address, #sc_wpfmp_notify_address').hide();
 		}
 	}).trigger("change");
+	$('select[name="data_save"]').change(function() {
+		if($('select[name="data_save"]').val() == "file") {
+			$('#sc_wpfmp_data_save').show();
+		} else {
+			$('#sc_wpfmp_data_save').hide();
+		}
+	}).trigger("change");
 });

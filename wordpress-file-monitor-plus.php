@@ -4,7 +4,7 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 1.0
+Version: 1.1.1
 Author URI: http://l3rady.com/
 */
 
@@ -107,6 +107,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 					'cron_method' => 'wordpress', // Cron method to be used for scheduling scans
 					'file_check_interval' => 'daily', // How often should the cron run
 					'notify_by_email' => 1, // Do we want to be notified by email when there is a file change?
+					'data_save' => 'database', // Where to save scan data and admin alert message
 					'from_address' => get_option('admin_email'), // Email address the notification comes from
 					'notify_address' => get_option('admin_email'), // Email address the notification is sent to
 					'site_root' => realpath(ABSPATH), // The file check path to start checking files from
@@ -232,13 +233,13 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
                                 <select id="sc_wpfmp_form_cron_method" name="cron_method">
                                     <option value="wordpress"<?php echo $selected['wordpress']; ?>><?php _e("WordPress Cron", "wordpress-file-monitor-plus"); ?></option>
                                     <option value="other"<?php echo $selected['other']; ?>><?php _e("Other Cron", "wordpress-file-monitor-plus"); ?></option>
-                                    </select>
+                                </select>
                                 <?php unset($selected); ?>
                             </td>
                         </tr>
                         <tr id="sc_wpfmp_cron_other">
-                            <td valign="middle"><?php _e("Cron Command:", "wordpress-file-monitor-plus"); ?> </td>
-                            <td valign="middle"><pre>wget <?php echo site_url(); ?>/index.php?sc_wpfmp_scan=1&amp;sc_wpfmp_key=<?php echo $this->settings['security_key']; ?></pre></td>
+                            <td valign="middle"><?php _e("Cron Command: ", "wordpress-file-monitor-plus"); ?></td>
+                            <td valign="middle"><pre>wget "<?php echo site_url(); ?>/index.php?sc_wpfmp_scan=1&amp;sc_wpfmp_key=<?php echo $this->settings['security_key']; ?>"</pre></td>
                         </tr>
                         <tr id="sc_wpfmp_cron_wordpress">
                             <td valign="middle"><label for="sc_wpfmp_form_file_check_interval"><?php _e("File Check Interval: ", "wordpress-file-monitor-plus"); ?></label></td>
@@ -251,6 +252,21 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
                                 </select>
                                 <?php unset($selected); ?>
                             </td>
+                        </tr>
+                        <tr>
+                            <td valign="middle"><label for="sc_wpfmp_form_data_save"><?php _e("Data Save Method: ", "wordpress-file-monitor-plus"); ?></label></td>
+                            <td valign="middle">
+								<?php $selected[$this->settings['data_save']] = " selected=\"selected\""; ?>
+                                <select id="sc_wpfmp_form_data_save" name="data_save">
+                                    <option value="database"<?php echo $selected['database']; ?>><?php _e("Database", "wordpress-file-monitor-plus"); ?></option>
+                                    <option value="file"<?php echo $selected['file']; ?>><?php _e("File", "wordpress-file-monitor-plus"); ?></option>
+                                </select>
+                                <?php unset($selected); ?>
+                            </td>
+                        </tr>
+                        <tr id="sc_wpfmp_data_save">
+                            <td valign="middle">&nbsp;</td>
+                            <td valign="middle"><pre><?php echo dirname(__FILE__)."/data/.sc_wpfmp_scan_data\n".dirname(__FILE__)."/data/.sc_wpfmp_admin_alert_content"; ?></pre>(<?php _e("Please add the above files to Exact Files To Ignore setting", "wordpress-file-monitor-plus"); ?>)</td>
                         </tr>
                         <tr>
                             <td valign="middle"><label for="sc_wpfmp_form_notify_by_email"><?php _e("Notify By Email: ", "wordpress-file-monitor-plus"); ?></label></td>
@@ -389,6 +405,16 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 			
 			$this->settings['file_check_interval'] = $settings['file_check_interval'];
 			
+			
+			// Check if file check interval is manual, hourly, daily or twicedaily
+			if(!($settings['data_save'] == "file" || $settings['data_save'] == "database")) {
+				$this->settingsFailed = true;
+				$this->settingsFailedMessage .= __("Invalid data save method selected", "wordpress-file-monitor-plus")."<br />";
+			}
+			
+			$this->settings['data_save'] = $settings['data_save'];
+			
+			
 			// can only be 1 or 0 so type cast to INT
 			$this->settings['notify_by_email'] = (int) $settings['notify_by_email'];
 			
@@ -463,13 +489,13 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 		*/
 		function scan() {
 			// Get old data
-			$this->oldScanData = maybe_unserialize(get_option('sc_wpfmp_scan_data'));
+			$this->oldScanData = $this->getPutScanData("get");
 			// Get new data
 			$this->newScanData = (array) $this->scan_dirs($this->settings['site_root']);
 			// Lets make sure that the new data is always sorted
 			ksort($this->newScanData);
-			// Save newScanData back to database
-			update_option('sc_wpfmp_scan_data', maybe_serialize($this->newScanData));
+			// Save newScanData back to database or file
+			$this->getPutScanData("put", $this->newScanData);
 			
 			// Only do checks for file ammends/aditions/removals if we have some old
 			// data to check against. Wont have old data if this is first scan.
@@ -490,8 +516,8 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 				if(($count_files_changed >= 1) || ($count_files_addedd >= 1) || ($count_files_removed >= 1)) {
 					// Get html for the alert
 					$alertMessage = $this->format_alert($files_added, $files_removed, $changed_files);
-					// save html into options table to be shown later
-					update_option('sc_wpfmp_admin_alert_content', $alertMessage);
+					// save html into db or file to be shown later
+					$this->getPutAlertContent("put", $alertMessage);
 					// yes there is an admin alert
 					$this->settings["is_admin_alert"] = 1;
 					// Save settings to save admin alert flag.
@@ -773,6 +799,94 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 
 
 		/**
+		 * Function deals with getting and putting scan data to and from DB or FILE
+		 *
+		 * @param string $getorput "get" to get data "put" to put data
+		 * @param array $data if putting data this should contain array of new scan data
+		 * @return array $data if getting data this should contain array of old scan data
+		*/
+		function getPutScanData($getorput, $data = NULL) {
+			
+			// Check how data is to be saved
+			if($this->settings['data_save'] == "file") {
+				$scandatafile = dirname(__FILE__)."/data/.sc_wpfmp_scan_data";
+				
+				// Are we getting or putting data
+				if($getorput == "get") {
+					
+					// Check if file exists. No point reading from file if it doesnt exist yet
+					if(file_exists($scandatafile)) {
+						$data = maybe_unserialize(file_get_contents($scandatafile));
+						return $data;
+					} else {
+						return NULL;	
+					} // End if file exists
+					
+				} else {
+					// Save contents to file
+					file_put_contents($scandatafile, maybe_serialize($data));
+				} // End if get or put
+				
+			} else {
+				
+				// Are we getting or putting data
+				if($getorput == "get") {
+					$data = maybe_unserialize(get_option('sc_wpfmp_scan_data'));
+					return $data;
+				} else {
+					update_option('sc_wpfmp_scan_data', maybe_serialize($data));
+				} // End if get or put
+				
+			} // End if File or Database
+			
+		} // End getPutScanData
+
+
+		/**
+		 * Function deals with getting and putting Admin Alert Content to and from DB or FILE
+		 *
+		 * @param string $getorput "get" to get data "put" to put data
+		 * @param string $data if putting data this should contain alert data
+		 * @return string $data if getting data this should contain alert data
+		*/
+		function getPutAlertContent($getorput, $data = NULL) {
+			
+			// Check how data is to be saved
+			if($this->settings['data_save'] == "file") {
+				$scandatafile = dirname(__FILE__)."/data/.sc_wpfmp_admin_alert_content";
+				
+				// Are we getting or putting data
+				if($getorput == "get") {
+					
+					// Check if file exists. No point reading from file if it doesnt exist yet
+					if(file_exists($scandatafile)) {
+						$data = file_get_contents($scandatafile);
+						return $data;
+					} else {
+						return NULL;	
+					} // End if file exists
+					
+				} else {
+					// Save contents to file
+					file_put_contents($scandatafile, $data);
+				} // End if get or put
+				
+			} else {
+				
+				// Are we getting or putting data
+				if($getorput == "get") {
+					$data = get_option('sc_wpfmp_admin_alert_content');
+					return $data;
+				} else {
+					update_option('sc_wpfmp_admin_alert_content', $data);
+				} // End if get or put
+				
+			} // End if File or Database
+			
+		} // End getPutAlertContent
+
+
+		/**
 		 * Shows warning that files have changed in Wordpress Admin
 		*/
 		function admin_alert() {
@@ -795,7 +909,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 		 * Show form to clear admin alert along with last alert. 
 		*/
 		function show_admin_alert() {
-			$alert_content = get_option('sc_wpfmp_admin_alert_content');
+			$alert_content = $this->getPutAlertContent("get");
 			?>
 			<form action="" method="post">
 				<?php wp_nonce_field('sc-wpfmp-update-settings'); ?>
