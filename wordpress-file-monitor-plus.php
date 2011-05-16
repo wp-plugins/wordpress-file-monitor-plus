@@ -4,7 +4,7 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 1.1
+Version: 1.1.1
 Author URI: http://l3rady.com/
 */
 
@@ -239,7 +239,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
                         </tr>
                         <tr id="sc_wpfmp_cron_other">
                             <td valign="middle"><?php _e("Cron Command: ", "wordpress-file-monitor-plus"); ?></td>
-                            <td valign="middle"><pre>wget <?php echo site_url(); ?>/index.php?sc_wpfmp_scan=1&amp;sc_wpfmp_key=<?php echo $this->settings['security_key']; ?></pre></td>
+                            <td valign="middle"><pre>wget "<?php echo site_url(); ?>/index.php?sc_wpfmp_scan=1&amp;sc_wpfmp_key=<?php echo $this->settings['security_key']; ?>"</pre></td>
                         </tr>
                         <tr id="sc_wpfmp_cron_wordpress">
                             <td valign="middle"><label for="sc_wpfmp_form_file_check_interval"><?php _e("File Check Interval: ", "wordpress-file-monitor-plus"); ?></label></td>

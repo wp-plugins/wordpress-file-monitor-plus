@@ -3,8 +3,8 @@ Contributors: l3rady
 Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
-Tested up to: 3.1.1
-Stable tag: 1.1
+Tested up to: 3.1.2
+Stable tag: 1.1.1
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -55,14 +55,18 @@ Each of the settings 'File Names To Ignore/Dir Names To Ignore/Exact Files To Ig
 
 = What is the 'other cron' method? =
 
-What this does is stops WordPress from running the 'File Check Scan' on the built in cron scheduler and allows you to run it externally. If you know how to setup a cron externally its recommended that you use this method because scans can take up to 10 seconds and longer. If you rely on the WordPress cron then a vistor may land on your site when the file scan is scheduled to run and the user will have to end up waiting for the scan to finish checking. Waiting for 10 seconds or even longer for a page to load is not great for your visitors.
+What this does is stops WordPress from running the 'File Check Scan' on the built in cron scheduler and allows you to run it externally. If you know how to setup a cron externally its recommended that you use this method. WordPress by default has a limited number of scan intervals which wont allow you to run the file cron at lets say 2:46AM and then every 3 hours. An external cron gives you greater flexibilty on when to run the file monitor scan.
 
 = I'm getting the error [Got a packet bigger than 'max_allowed_packet' bytes] =
 
 This is due to the scan data being too large to insert into the DB at once. There is one of three things you can do to rectify:
 1. Change the `Data Save Method` to `file` instead of `database`. 
 2. Reduce the number of `File Check Methods` down to one. I'd recommend you just use `Date Modified` or `File Hash`. 
-3. Make a request to your webhost to increase the MySQL `max_allowed_packet` to a larger value. 
+3. Make a request to your webhost to increase the MySQL `max_allowed_packet` to a larger value.
+
+= I'm worried that the data files that are created by your plugin are viewable by the public, which poses a security risk. =
+
+This plugin ships with a .htaccess file that denies any access to any file in the data dir. But if you feel you want to add more security you can CHMOD the two files `.sc_wpfmp_scan_data` and `.sc_wpfmp_admin_alert_content` to 0600 which only allows the owner (PHP) read and write access.
 
 == Screenshots ==
 
@@ -72,6 +76,10 @@ This is due to the scan data being too large to insert into the DB at once. Ther
 4. Email changed files report
 
 == Changelog ==
+
+= 1.1.1 =
+* Added .htaccess file to the data directory just incase your web host doesnt already block access to dot files
+* Wrapped wget URL with quotes to make work properly. Thank you Luciano Passuello for spotting this.
 
 = 1.1 =
 * Added setting to be able to save scan data and admin alert content to file rather than the database
