@@ -3,8 +3,8 @@ Contributors: l3rady
 Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
-Tested up to: 3.1.2
-Stable tag: 1.1.1
+Tested up to: 3.1.3
+Stable tag: 1.2
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -21,6 +21,10 @@ Monitors your WordPress installation for added/deleted/changed files.  When a ch
 - Ability to exclude files and directories from scan (for instance if you use a caching system that stores its files within the monitored zone)
 - Site URL included in notification email in case plugin is in use on multiple sites
 - Ability to run the file checking via an external cron so not to slow down visits to your website and to give greater flexibility over scheduling
+
+*Languages*
+
+- Japanese by [o6asan](http://o6asan.com/BLOG-J/)
 
 == Installation ==
 
@@ -77,12 +81,23 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 
 == Changelog ==
 
+= 1.2 =
+* Edited external cron command to not output anything to file system.
+* Re-coded many parts.
+* Made use of the Settings API.
+* Created a filter to deal with formatting the file modified time in the report. This filter makes use of default WordPress settings and correctly shows the modified time in your set timezone.
+* If saving to file, the two files that are needed to be ignored are now auto ignored rather than relying on the user to add them to the ignore file list.
+* Made use of `DIRECTORY_SEPARATOR` constant to make sure compatibility with Windows OS and backslash directories.
+* Added functionality to reset settings to defaults.
+* Added manual scan quick link to plugin listing.
+* Added clear admin alert link to the email that's sent.
+
 = 1.1.1 =
-* Added .htaccess file to the data directory just incase your web host doesnt already block access to dot files
+* Added .htaccess file to the data directory just incase your web host doesnt already block access to dot files.
 * Wrapped wget URL with quotes to make work properly. Thank you Luciano Passuello for spotting this.
 
 = 1.1 =
-* Added setting to be able to save scan data and admin alert content to file rather than the database
+* Added setting to be able to save scan data and admin alert content to file rather than the database.
 
 = 1.0 =
-* Initial release
+* Initial release.
