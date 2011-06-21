@@ -4,7 +4,7 @@ Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
 Tested up to: 3.1.3
-Stable tag: 1.2
+Stable tag: 1.2.1
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -80,6 +80,9 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 4. Email changed files report
 
 == Changelog ==
+
+= 1.2.1 =
+* Fixed settings bug when installing fresh install.
 
 = 1.2 =
 * Edited external cron command to not output anything to file system.

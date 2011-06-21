@@ -4,7 +4,7 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 1.2
+Version: 1.2.1
 Author URI: http://l3rady.com/
 */
 
@@ -33,7 +33,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 
         protected static $settings_option_field = "sc_wpfmp_settings"; // Option name for settings
         protected static $settings_option_field_ver = "sc_wpfmp_settings_ver"; // Option name for settings version
-        protected static $settings_option_field_current_ver = "1.0"; // Current settings version
+        protected static $settings_option_field_current_ver = "1.1"; // Current settings version
         protected static $cron_name = "sc_wpfmp_scan"; // Name of cron
         protected static $frequency_intervals = array("hourly", "twicedaily", "daily", "manual"); // What cron schedules are available
 		

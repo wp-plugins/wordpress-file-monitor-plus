@@ -39,7 +39,7 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
     protected function settingsUpToDate() {
         $current_ver = get_option(parent::$settings_option_field_ver); // Get current plugin version
         if(parent::$settings_option_field_current_ver != $current_ver) { // is the version the same as this plugin?
-            $options = maybe_unserialize(get_option(parent::$settings_option_field)); // get current settings from DB
+            $options = (array) maybe_unserialize(get_option(parent::$settings_option_field)); // get current settings from DB
             $defaults = array( // Here are the default values
 					'cron_method' => 'wordpress', // Cron method to be used for scheduling scans
 					'file_check_interval' => 'daily', // How often should the cron run
