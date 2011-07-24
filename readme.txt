@@ -23,7 +23,7 @@ Monitors your WordPress installation for added/deleted/changed files.  When a ch
 - Ability to run the file checking via an external cron so not to slow down visits to your website and to give greater flexibility over scheduling
 - Ability to set file extension to be ignored or only scanned.
 
-This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/plugins/wordpress-file-monitor/). This plugin was forked because there seemed to be no further development on the existing plugin and there was no way to contact the original author to ask about taking ownership. WordPress File Monitor Plus has the following improvements over Updates Notifier:
+This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/plugins/wordpress-file-monitor/). This plugin was forked because there seemed to be no further development on the existing plugin and there was no way to contact the original author to ask about taking ownership. WordPress File Monitor Plus has the following improvements over WordPress File Monitor:
 
 - Completely rewritten from the ground up using best practises for writing WordPress plugins
 - Code wrapped in a class so better namespace.
