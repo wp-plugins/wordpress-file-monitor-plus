@@ -16,20 +16,23 @@
 */
 
 jQuery(function ($) {
-	$('select[name="cron_method"]').change(function() {
-		if($('select[name="cron_method"]').val() == "wordpress") {
-			$('#sc_wpfmp_cron_other').hide();
-			$('#sc_wpfmp_cron_wordpress').show();
+	$('select[name="sc_wpfmp_settings[cron_method]"]').change(function() {
+		if($('select[name="sc_wpfmp_settings[cron_method]"]').val() == "wordpress") {
+			$(this).parent().find("div").hide();
+            $('select[name="sc_wpfmp_settings[file_check_interval]"]').parent().parent().show();
 		} else {
-			$('#sc_wpfmp_cron_wordpress').hide();
-			$('#sc_wpfmp_cron_other').show();
+			$(this).parent().find("div").show();
+            $('select[name="sc_wpfmp_settings[file_check_interval]"]').parent().parent().hide();
 		}
 	}).trigger("change");
-	$('select[name="notify_by_email"]').change(function() {
-		if($('select[name="notify_by_email"]').val() == 1) {
-			$('#sc_wpfmp_from_address, #sc_wpfmp_notify_address').show();
+
+	$('select[name="sc_wpfmp_settings[notify_by_email]"]').change(function() {
+		if($('select[name="sc_wpfmp_settings[notify_by_email]"]').val() == 1) {
+			$('input[name="sc_wpfmp_settings[from_address]"]').parent().parent().show();
+            $('input[name="sc_wpfmp_settings[notify_address]"]').parent().parent().show();
 		} else {
-			$('#sc_wpfmp_from_address, #sc_wpfmp_notify_address').hide();
+			$('input[name="sc_wpfmp_settings[from_address]"]').parent().parent().hide();
+            $('input[name="sc_wpfmp_settings[notify_address]"]').parent().parent().hide();
 		}
 	}).trigger("change");
 });
