@@ -59,9 +59,11 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
                     ),
 					'display_admin_alert' => 1, // Do we allow the plugin to notify us when there is a change in the admin area?
 					'is_admin_alert' => 0, // Is there a live admin alert?
-					'security_key' => sha1(microtime(true).mt_rand(10000,90000)) // Generate a random key to be used for Other Cron Method
+					'security_key' => sha1(microtime(true).mt_rand(10000,90000)), // Generate a random key to be used for Other Cron Method
 					// The security key is only shown to the admin and has to be used for triggering a manual scan via an external cron.
 					// This is to stop non admin users from being able to trigger the cron and potentially abuse server resources.
+                    'file_extension_mode' => 0, // 0 = Disabled, 1 = ignore below extensions, 2 = only scan below extensions.
+                    'file_extensions' => array('jpg', 'jpeg', 'jpe', 'gif', 'png', 'bmp', 'tif', 'tiff', 'ico') // List of extensions separated by pipe.
 			);
             // Intersect current options with defaults. Basically removing settings that are obsolete
             $options = array_intersect_key($options, $defaults);
@@ -171,6 +173,8 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         add_settings_field("sc_wpfmp_settings_main_exclude_paths_wild", __("Dir Names To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_paths_wild"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
         add_settings_field("sc_wpfmp_settings_main_exclude_files", __("Exact Files To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_files"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
         add_settings_field("sc_wpfmp_settings_main_exclude_paths", __("Exact Dirs To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_paths"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
+        add_settings_field("sc_wpfmp_settings_main_file_extension_mode", __("File Extensions Scan", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_file_extension_mode"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
+        add_settings_field("sc_wpfmp_settings_main_file_extensions", __("File Extensions", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_file_extensions"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
     }
     public function sc_wpfmp_settings_validate($input) {
         $valid = get_option(parent::$settings_option_field);
@@ -224,10 +228,20 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         } else {
             add_settings_error("sc_wpfmp_settings_main_site_root", "sc_wpfmp_settings_main_site_root_error", __("File check root is not valid. Make sure that PHP has read permissions of the entered file check root", "wordpress-file-monitor-plus"), "error");
         }
-        $valid['exclude_files_wild'] = array_map('trim', (array) explode("\n", $input['exclude_files_wild']));
-        $valid['exclude_paths_wild'] = array_map('trim', (array) explode("\n", $input['exclude_paths_wild']));
-        $valid['exclude_files'] = array_map('trim', (array) explode("\n", $input['exclude_files']));
-        $valid['exclude_paths'] = array_map('trim', (array) explode("\n", $input['exclude_paths']));
+        $valid['exclude_files_wild'] = self::textarea_newlines_to_array($input['exclude_files_wild']);
+        $valid['exclude_paths_wild'] = self::textarea_newlines_to_array($input['exclude_paths_wild']);
+        $valid['exclude_files'] = self::textarea_newlines_to_array($input['exclude_files']);
+        $valid['exclude_paths'] = self::textarea_newlines_to_array($input['exclude_paths']);
+        if(!empty($valid['exclude_paths'])) {
+            $valid['exclude_paths'] = array_map('realpath', $valid['exclude_paths']);
+        }
+        $sanitized_file_extension_mode = absint($input['file_extension_mode']);
+        if(2 === $sanitized_file_extension_mode || 1 === $sanitized_file_extension_mode || 0 === $sanitized_file_extension_mode) {
+            $valid['file_extension_mode'] = $sanitized_file_extension_mode;
+        } else {
+            add_settings_error("sc_wpfmp_settings_main_file_extension_mode", "sc_wpfmp_settings_main_file_extension_mode_error", __("Invalid file extension mode selected", "wordpress-file-monitor-plus"), "error");
+        }
+        $valid['file_extensions'] = self::file_extensions_to_array($input['file_extensions']);
         return $valid;
     }
     public function sc_wpfmp_settings_main_text() {}
@@ -319,6 +333,20 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         $options = get_option(parent::$settings_option_field);
         ?><textarea name="<?php echo parent::$settings_option_field ?>[exclude_paths]" cols="25" rows="3"><?php echo implode("\n", $options['exclude_paths']); ?></textarea><?php
     }
+    public function sc_wpfmp_settings_main_field_file_extension_mode() {
+        $options = get_option(parent::$settings_option_field);
+        ?>
+        <select name="<?php echo parent::$settings_option_field ?>[file_extension_mode]">
+            <option value="0" <?php selected( $options['file_extension_mode'], 0 ); ?>><?php _e("Disabled", "wordpress-file-monitor-plus"); ?></option>
+            <option value="1" <?php selected( $options['file_extension_mode'], 1 ); ?>><?php _e("Exclude files that have an extension listed below", "wordpress-file-monitor-plus"); ?></option>
+            <option value="2" <?php selected( $options['file_extension_mode'], 2 ); ?>><?php _e("Only scan files that have an extension listed below", "wordpress-file-monitor-plus"); ?></option>
+        </select>
+        <?php
+    }
+    public function sc_wpfmp_settings_main_field_file_extensions() {
+        $options = get_option(parent::$settings_option_field);
+        ?><input class="regular-text" name="<?php echo parent::$settings_option_field ?>[file_extensions]" value="<?php echo implode($options['file_extensions'], "|"); ?>" /> <span class="description"><?php _e("Separate extensions with | character.", "wordpress-file-monitor-plus"); ?></span><?php
+    }
     public function create_admin_pages_scripts() {
         wp_enqueue_script('wordpress_file_monitor_plus_js_function', plugins_url('js/function.js', "wordpress-file-monitor-plus/wordpress-file-monitor-plus.php"), array('jquery'), '1.2', true);
     }
@@ -332,6 +360,35 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         $n = absint($n);
         if(1 !== $n) { $n = 0; }
         return $n;
+    }
+
+
+    /**
+     * Takes multiline input from textarea and splits newlines into an array.
+     *
+     * @param string $input Text from textarea
+     * @return array $output
+     */
+    protected function textarea_newlines_to_array($input) {
+        $output = (array) explode("\n", $input); // Split textarea input by new lines
+        $output = array_map('trim', $output); // trim whitespace off end of line.
+        $output = array_filter($output); // remove empty lines from array
+        return $output; // return array.
+    }
+
+
+    /**
+     * Takes extension list "foo|bar|foo|bar" and converts into array.
+     *
+     * @param string $input Extension list from settings page input
+     * @return array $output
+     */
+    protected function file_extensions_to_array($input) {
+        $output = strtolower($input); // set all to lower case
+        $output = preg_replace("/[^a-z0-9|]+/", "", $output); // strip characters that cannot make up valid extension
+        $output = (array) explode("|", $output); // Split into array
+        $output = array_filter($output); // remove empty entries from array
+        return $output;
     }
 }
 ?>

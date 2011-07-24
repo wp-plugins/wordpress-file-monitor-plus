@@ -3,8 +3,8 @@ Contributors: l3rady
 Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
-Tested up to: 3.1.3
-Stable tag: 1.2.1
+Tested up to: 3.2.1
+Stable tag: 1.3
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -21,6 +21,20 @@ Monitors your WordPress installation for added/deleted/changed files.  When a ch
 - Ability to exclude files and directories from scan (for instance if you use a caching system that stores its files within the monitored zone)
 - Site URL included in notification email in case plugin is in use on multiple sites
 - Ability to run the file checking via an external cron so not to slow down visits to your website and to give greater flexibility over scheduling
+- Ability to set file extension to be ignored or only scanned.
+
+This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/plugins/wordpress-file-monitor/). This plugin was forked because there seemed to be no further development on the existing plugin and there was no way to contact the original author to ask about taking ownership. WordPress File Monitor Plus has the following improvements over Updates Notifier:
+
+- Completely rewritten from the ground up using best practises for writing WordPress plugins
+- Code wrapped in a class so better namespace.
+- You can set the cron interval, allowing for more frequent checks.
+- Cron can be run externally to allow finer control over when the scan runs.
+- No code is inserted into the front end website.
+- Allows you to set the 'from address'.
+- A couple more configurable options.
+- Makes use of the Settings API.
+- A number of available hooks and filters for advanced users.
+- Active support and development.
 
 *Languages*
 
@@ -80,6 +94,13 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 4. Email changed files report
 
 == Changelog ==
+
+= 1.3 =
+* Auto remove trailing slash off exact dirs to ignore.
+* Altered `sc_wpfmp_format_file_modified_time` filter to include original file timestamp to give better way of generating output.
+* Included new settings that allow you to ignore files with certain extensions or only scan files with certain extensions.
+* Removed document root from being stored with every directory. This cuts down on memory usage and storage usage.
+* Added a number of filters that can allow other plugin authors to add directories and files to be ignored by WPFMP. E.G. a WP caching plugin can automatically tell WPFMP to auto ignore it's cache directory.
 
 = 1.2.1 =
 * Fixed settings bug when installing fresh install.
