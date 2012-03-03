@@ -16,11 +16,12 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-if(!defined('WP_UNINSTALL_PLUGIN')) {
-	exit();	
+// Bring fnmatch compatability to non unix OS
+if( ! function_exists( 'fnmatch' ) ) {
+
+    function fnmatch( $pattern, $string ) {
+        return preg_match( "#^" . strtr( preg_quote( $pattern, '#' ), array( '\*' => '.*', '\?' => '.' ) ) . "$#i", $string );
+    }
+
 }
-delete_option("sc_wpfmp_settings");
-delete_option("sc_wpfmp_settings_ver");
-delete_option("sc_wpfmp_scan_data");
-delete_option("sc_wpfmp_admin_alert_content");
 ?>
