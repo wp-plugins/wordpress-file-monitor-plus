@@ -3,8 +3,8 @@ Contributors: l3rady
 Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
-Tested up to: 3.2.1
-Stable tag: 1.3
+Tested up to: 3.3.1
+Stable tag: 1.4
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -94,6 +94,11 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 4. Email changed files report
 
 == Changelog ==
+
+= 1.4 =
+* Fixed notices
+* Added wildcard (*) support to exclude files/dirs using [fnmatch](http://php.net/manual/en/function.fnmatch.php). This will allow more control over what is ignored. Upon upgrading your existing exclude settings will be combined and converted to the new fnmatch format.
+* Removed formatRawSize() function and replaced with size_format() that comes with WordPress already.
 
 = 1.3 =
 * Auto remove trailing slash off exact dirs to ignore.
