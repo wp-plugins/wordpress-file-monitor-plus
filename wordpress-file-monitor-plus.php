@@ -4,13 +4,13 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 1.3
+Version: 1.4.1
 Author URI: http://l3rady.com/
 Text Domain: wordpress-file-monitor-plus
 Domain Path: /languages
 */
 
-/*  Copyright 2011  Scott Cariss  (email : scott@l3rady.com)
+/*  Copyright 2012  Scott Cariss  (email : scott@l3rady.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 
         protected static $settings_option_field = "sc_wpfmp_settings"; // Option name for settings
         protected static $settings_option_field_ver = "sc_wpfmp_settings_ver"; // Option name for settings version
-        protected static $settings_option_field_current_ver = "1.3"; // Current settings version
+        protected static $settings_option_field_current_ver = "1.4"; // Current settings version
         protected static $cron_name = "sc_wpfmp_scan"; // Name of cron
         protected static $frequency_intervals = array("hourly", "twicedaily", "daily", "manual"); // What cron schedules are available
 		
@@ -81,7 +81,12 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 		*/
 		function things_to_do() {
 			$options = get_option(self::$settings_option_field); // get settings
-			if((1 == $_GET['sc_wpfmp_scan']) && ($options['security_key'] == $_GET['sc_wpfmp_key']) && ("other" == $options['cron_method'])) { // Check if a scan is being requested external and that the correct security key is provided and the that the settings allow an external cron
+			if( isset($_GET['sc_wpfmp_scan'])
+                && isset($_GET['sc_wpfmp_key'])
+                && (1 == $_GET['sc_wpfmp_scan'])
+                && ($options['security_key'] == $_GET['sc_wpfmp_key'])
+                && ("other" == $options['cron_method']))
+            { // Check if a scan is being requested external and that the correct security key is provided and the that the settings allow an external cron
 				do_action('sc_wpfmp_scan'); // Go run file check scan.
 				_e("Scan Successful", "wordpress-file-monitor-plus"); // Simple message to say the cron ran :)
 				exit; // No point showing any other content as this is and external cron running this.
@@ -133,39 +138,49 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
             if(!$options) { // Are settings set?
                 $options = get_option(self::$settings_option_field); // Get settings
                 if("file" == $options['data_save']) { // are we saving to file?
-                    $options['exclude_files'][] = dirname(__FILE__).DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".sc_wpfmp_scan_data"; // add file to ignore
-                    $options['exclude_files'][] = dirname(__FILE__).DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".sc_wpfmp_admin_alert_content"; // add file to ignore
+                    $options['exclude_paths_files'][] = dirname(__FILE__).DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".sc_wpfmp_scan_data"; // add file to ignore
+                    $options['exclude_paths_files'][] = dirname(__FILE__).DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".sc_wpfmp_admin_alert_content"; // add file to ignore
                 }
                 if(1 == $options['file_extension_mode']) {
                     $options['file_extensions'] = apply_filters("sc_wpfmp_filter_ignore_extensions", $options['file_extensions']); // Allow other plugins to add remove extensions
                 } elseif(2 == $options['file_extension_mode']) {
                     $options['file_extensions'] = apply_filters("sc_wpfmp_filter_scan_extensions", $options['file_extensions']); // Allow other plugins to add remove extensions
                 }
-                $options['exclude_paths'] = apply_filters("sc_wpfmp_filter_exclude_paths", $options['exclude_paths']);
-                $options['exclude_files'] = apply_filters("sc_wpfmp_filter_exclude_files", $options['exclude_files']);
-                $options['exclude_paths_wild'] = apply_filters("sc_wpfmp_filter_exclude_paths_wild", $options['exclude_paths_wild']);
-                $options['exclude_files_wild'] = apply_filters("sc_wpfmp_filter_exclude_files_wild", $options['exclude_files_wild']);
+                $options['exclude_paths_files'] = apply_filters("sc_wpfmp_filter_exclude_paths_files", $options['exclude_paths_files']);
             }
+
+            $dirs = array();
+
 			if ($handle = opendir($options['site_root'].$path)) { // Open dir
 				while (false !== ($file = readdir($handle))) { // loop through dirs
 					if ("." != $file  && ".." != $file) { // ignore . and ..
-						if('dir' === filetype($options['site_root'].$path.DIRECTORY_SEPARATOR.$file)) { // is this a directory?
-							if(!(in_array($file, $options['exclude_paths_wild']) || in_array($options['site_root'].$path.DIRECTORY_SEPARATOR.$file, $options['exclude_paths']))) {// check if this dir name or dir path is to be ignored
-								$dirs = array_merge((array) $dirs, (array) self::scan_dirs($path.DIRECTORY_SEPARATOR.$file)); // We are all good lets continue down the rabbit hole.
-							}
+                        $full_file_name = $path.DIRECTORY_SEPARATOR.$file;
+                        $full_dir_file_name = $options['site_root'].$full_file_name;
+                        if( isset( $options['exclude_paths_files'] ) ) { // have we got any dirs/files to exclude
+                            foreach( $options['exclude_paths_files'] as $exclude ) { // loop through dirs/folders to exclude
+                                if(fnmatch($exclude, $full_dir_file_name, FNM_NOESCAPE)) { // Any matches?
+                                    continue 2; // yes lets break from this foreach and skip below code in while loop
+                                }
+                            }
+                        }
+						if('dir' === filetype($full_dir_file_name)) { // is this a directory?
+							$dirs = array_merge((array) $dirs, (array) self::scan_dirs($full_file_name)); // We are all good lets continue down the rabbit hole.
 						} else { // is must be a file if not a directory
-                            if(0 == $options['file_extension_mode'] || (1 == $options['file_extension_mode'] && !in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $options['file_extensions'])) || (2 == $options['file_extension_mode'] && in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $options['file_extensions']))) {
-                                if(!(in_array($file, $options['exclude_files_wild']) || in_array($options['site_root'].$path.DIRECTORY_SEPARATOR.$file, $options['exclude_files']))) { // check if this file name or file path is to be ignored
-                                    $dirs[$path.DIRECTORY_SEPARATOR.$file] = array(); // We are all good lets get the data of the the file.
-                                    if(1 == $options['file_check_method']['size']) { // are we to check its filesize?
-                                        $dirs[$path.DIRECTORY_SEPARATOR.$file]["size"] = filesize($options['site_root'].$path.DIRECTORY_SEPARATOR.$file);
-                                    }
-                                    if(1 == $options['file_check_method']['modified']) { // are we to check its modified date?
-                                        $dirs[$path.DIRECTORY_SEPARATOR.$file]["modified"] = filemtime($options['site_root'].$path.DIRECTORY_SEPARATOR.$file);
-                                    }
-                                    if(1 == $options['file_check_method']['md5']) { // are we to check its file hash?
-                                        $dirs[$path.DIRECTORY_SEPARATOR.$file]["md5"] = md5_file($options['site_root'].$path.DIRECTORY_SEPARATOR.$file);
-                                    }
+                            if( (0 == $options['file_extension_mode'])
+                                || ( (1 == $options['file_extension_mode'] )
+                                    && ! in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), $options['file_extensions'] ) )
+                                || ( (2 == $options['file_extension_mode'])
+                                    && in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), $options['file_extensions'] ) ) )
+                            {
+                                $dirs[$full_file_name] = array(); // We are all good lets get the data of the the file.
+                                if(1 == $options['file_check_method']['size']) { // are we to check its filesize?
+                                    $dirs[$full_file_name]["size"] = filesize($options['site_root'].$full_file_name);
+                                }
+                                if(1 == $options['file_check_method']['modified']) { // are we to check its modified date?
+                                    $dirs[$full_file_name]["modified"] = filemtime($options['site_root'].$full_file_name);
+                                }
+                                if(1 == $options['file_check_method']['md5']) { // are we to check its file hash?
+                                    $dirs[$full_file_name]["md5"] = md5_file($options['site_root'].$full_file_name);
                                 }
                             }
 						}
@@ -222,8 +237,8 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 					$alertMessage .= "  <tr>";
 					$alertMessage .= "    <td>".$key."</td>";
 					if(1 == $options['file_check_method']['size']) {
-						$alertMessage .= "    <td nowrap='nowrap'>".self::formatRawSize($newScanData[$key]["size"])."</td>";
-						$alertMessage .= "    <td nowrap='nowrap'>".self::formatRawSize($oldScanData[$key]["size"])."</td>";
+						$alertMessage .= "    <td nowrap='nowrap'>".size_format($newScanData[$key]["size"])."</td>";
+						$alertMessage .= "    <td nowrap='nowrap'>".size_format($oldScanData[$key]["size"])."</td>";
 					}
 					if(1 == $options['file_check_method']['modified']) {
 						$alertMessage .= "    <td nowrap='nowrap'>".apply_filters("sc_wpfmp_format_file_modified_time", NULL, $newScanData[$key]["modified"])."</td>";
@@ -261,7 +276,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 					$alertMessage .= "  <tr>";
 					$alertMessage .= "    <td>".$key."</td>";
 					if(1 == $options['file_check_method']['size']) {
-						$alertMessage .= "    <td nowrap='nowrap'>".self::formatRawSize($newScanData[$key]["size"])."</td>";
+						$alertMessage .= "    <td nowrap='nowrap'>".size_format($newScanData[$key]["size"])."</td>";
 					}
 					if(1 == $options['file_check_method']['modified']) {
 						$alertMessage .= "    <td nowrap='nowrap'>".apply_filters("sc_wpfmp_format_file_modified_time", NULL, $newScanData[$key]["modified"])."</td>";
@@ -297,7 +312,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 					$alertMessage .= "  <tr>";
 					$alertMessage .= "    <td>".$key."</td>";
 					if(1 == $options['file_check_method']['size']) {
-						$alertMessage .= "    <td nowrap='nowrap'>".self::formatRawSize($oldScanData[$key]["size"])."</td>";
+						$alertMessage .= "    <td nowrap='nowrap'>".size_format($oldScanData[$key]["size"])."</td>";
 					}
 					if(1 == $options['file_check_method']['modified']) {
 						$alertMessage .= "    <td nowrap='nowrap'>".apply_filters("sc_wpfmp_format_file_modified_time", NULL, $oldScanData[$key]["modified"])."</td>";
@@ -527,26 +542,6 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 			}
 			return $diff; 
 		}
-		
-
-		/**
-		 * Returns human readable format of filesize.
-		 *
-		 * Taken from @link and modified slightly. No need to floor($e) twice and
-		 * put in check if 0 decimal place then dont show decimal.
-		 *
-		 * @link http://www.stemkoski.com/how-to-format-raw-byte-file-size-into-a-humanly-readable-value-using-php/
-		 * @param int $bytes Byte size of file
-		 * @return string $output Human readable format of byte size.
-		*/
-		public function formatRawSize($bytes) {
-			if(!empty($bytes)) {
-				$s = array('B', 'KB', 'MB', 'GB', 'TB', 'PB');
-				$e = floor(log($bytes)/log(1024));
-				$output = sprintf('%.' . ($e == 0 ? 0 : 2) . 'f '.$s[$e], ($bytes/pow(1024, $e)));
-				return $output;
-			}
-		}
 
 
         /**
@@ -568,8 +563,11 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
 
 }
 
+// Include Compatability Functions
+require_once("functions/compatability.php");
 // Include Settings Class
 require_once("classes/wpfmp.settings.class.php");
+
 
 // Create instance of plugin classes
 $sc_wpfmp = new sc_WordPressFileMonitorPlus();

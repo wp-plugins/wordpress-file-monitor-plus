@@ -1,5 +1,5 @@
 <?php
-/*  Copyright 2011  Scott Cariss  (email : scott@l3rady.com)
+/*  Copyright 2012  Scott Cariss  (email : scott@l3rady.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -40,6 +40,8 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         $current_ver = get_option(parent::$settings_option_field_ver); // Get current plugin version
         if(parent::$settings_option_field_current_ver != $current_ver) { // is the version the same as this plugin?
             $options = (array) maybe_unserialize(get_option(parent::$settings_option_field)); // get current settings from DB
+            if( isset( $current_ver ) && ( $current_ver <= 1.3 ) )
+                $options = self::update_settings_pre_1_4_to_1_4($options); // Convert old settings to new setup
             $defaults = array( // Here are the default values
 					'cron_method' => 'wordpress', // Cron method to be used for scheduling scans
 					'file_check_interval' => 'daily', // How often should the cron run
@@ -48,10 +50,7 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
 					'from_address' => get_option('admin_email'), // Email address the notification comes from
 					'notify_address' => get_option('admin_email'), // Email address the notification is sent to
 					'site_root' => realpath(ABSPATH), // The file check path to start checking files from
-					'exclude_paths' => array(), // What exact directories should we ignore?
-					'exclude_files' => array(), // What exact files should we ignore?
-					'exclude_paths_wild' => array(), // What directory names should we ignore?
-					'exclude_files_wild' => array(), // What file names should we ignore
+                    'exclude_paths_files' => array(), // What files and dirs should we ignore?
                     'file_check_method' => array(
                         'size' => 1, // Should we log the filesize of files?
                         'modified' => 1, // Should we log the modified date of files?
@@ -74,6 +73,42 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         }
     }
 
+
+    /**
+     * Upgrades settings from pre version 1.4 to version 1.4
+     *
+     * Now combined all excluding of files and dirs into one
+     * setting that now uses fnmatch(). Because of this the old
+     * settings need copying over to the new setting as well as
+     * converting to an fnmatch() compatible format.
+     *
+     * @param array $options
+     * @return array $options
+     */
+    private function update_settings_pre_1_4_to_1_4($options) {
+        $options['exclude_paths_files'] = array();
+        if( isset( $options['exclude_paths'] ) ) {
+            foreach( $options['exclude_paths'] as $exclude) {
+                $options['exclude_paths_files'][] = rtrim($exclude, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR."*";
+            }
+        }
+        if( isset( $options['exclude_files'] ) ) {
+            foreach( $options['exclude_files'] as $exclude) {
+                $options['exclude_paths_files'][] = $exclude;
+            }
+        }
+        if( isset( $options['exclude_paths_wild'] ) ) {
+            foreach( $options['exclude_paths_wild'] as $exclude) {
+                $options['exclude_paths_files'][] = "*".DIRECTORY_SEPARATOR.trim($exclude, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR."*";
+            }
+        }
+        if( isset( $options['exclude_files_wild'] ) ) {
+            foreach( $options['exclude_files_wild'] as $exclude) {
+                $options['exclude_paths_files'][] = "*".DIRECTORY_SEPARATOR.ltrim($exclude, DIRECTORY_SEPARATOR);
+            }
+        }
+        return $options;
+    }
 
     /**
      * Adds settings link on plugin list
@@ -103,7 +138,11 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
      */
     public function admin_settings_menu() {
         $options = get_option(parent::$settings_option_field); // get settings
-        if(current_user_can(SC_WPFMP_ADMIN_ALERT_PERMISSION) && "wordpress-file-monitor-plus" == $_GET['page'] && isset($_GET['sc_wpfmp_action'])) {
+        if( isset($_GET['sc_wpfmp_action'])
+            && isset($_GET['page'])
+            && current_user_can(SC_WPFMP_ADMIN_ALERT_PERMISSION)
+            && "wordpress-file-monitor-plus" == $_GET['page'] )
+        {
             switch($_GET['sc_wpfmp_action']) {
                 case "sc_wpfmp_scan" :
                     do_action(parent::$cron_name);
@@ -169,10 +208,7 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         add_settings_field("sc_wpfmp_settings_main_display_admin_alert", __("Admin Alert", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_display_admin_alert"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
         add_settings_field("sc_wpfmp_settings_main_file_check_method", __("File Check Method", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_file_check_method"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
         add_settings_field("sc_wpfmp_settings_main_site_root", __("File Check Root", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_site_root"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
-        add_settings_field("sc_wpfmp_settings_main_exclude_files_wild", __("File Names To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_files_wild"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
-        add_settings_field("sc_wpfmp_settings_main_exclude_paths_wild", __("Dir Names To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_paths_wild"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
-        add_settings_field("sc_wpfmp_settings_main_exclude_files", __("Exact Files To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_files"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
-        add_settings_field("sc_wpfmp_settings_main_exclude_paths", __("Exact Dirs To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_exclude_paths"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
+        add_settings_field("sc_wpfmp_settings_main_exclude_paths_files", __("Dirs/Files To Ignore", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_exclude_paths_files"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
         add_settings_field("sc_wpfmp_settings_main_file_extension_mode", __("File Extensions Scan", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_file_extension_mode"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
         add_settings_field("sc_wpfmp_settings_main_file_extensions", __("File Extensions", "wordpress-file-monitor-plus"), array(__CLASS__, "sc_wpfmp_settings_main_field_file_extensions"), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main");
     }
@@ -228,13 +264,7 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         } else {
             add_settings_error("sc_wpfmp_settings_main_site_root", "sc_wpfmp_settings_main_site_root_error", __("File check root is not valid. Make sure that PHP has read permissions of the entered file check root", "wordpress-file-monitor-plus"), "error");
         }
-        $valid['exclude_files_wild'] = self::textarea_newlines_to_array($input['exclude_files_wild']);
-        $valid['exclude_paths_wild'] = self::textarea_newlines_to_array($input['exclude_paths_wild']);
-        $valid['exclude_files'] = self::textarea_newlines_to_array($input['exclude_files']);
-        $valid['exclude_paths'] = self::textarea_newlines_to_array($input['exclude_paths']);
-        if(!empty($valid['exclude_paths'])) {
-            $valid['exclude_paths'] = array_map('realpath', $valid['exclude_paths']);
-        }
+        $valid['exclude_paths_files'] = self::textarea_newlines_to_array($input['exclude_paths_files']);
         $sanitized_file_extension_mode = absint($input['file_extension_mode']);
         if(2 === $sanitized_file_extension_mode || 1 === $sanitized_file_extension_mode || 0 === $sanitized_file_extension_mode) {
             $valid['file_extension_mode'] = $sanitized_file_extension_mode;
@@ -317,21 +347,9 @@ class sc_WordPressFileMonitorPlusSettings extends sc_WordPressFileMonitorPlus {
         $options = get_option(parent::$settings_option_field);
         ?><input name="<?php echo parent::$settings_option_field ?>[site_root]" value="<?php echo $options['site_root']; ?>" /> <span class="description"><?php printf(__("Default: %s", "wordpress-file-monitor-plus"), realpath(ABSPATH)); ?></span><?php
     }
-    public function sc_wpfmp_settings_main_field_exclude_files_wild() {
+    public function sc_wpfmp_settings_main_exclude_paths_files() {
         $options = get_option(parent::$settings_option_field);
-        ?><textarea name="<?php echo parent::$settings_option_field ?>[exclude_files_wild]" cols="25" rows="3"><?php echo implode("\n", $options['exclude_files_wild']); ?></textarea><?php
-    }
-    public function sc_wpfmp_settings_main_field_exclude_paths_wild() {
-        $options = get_option(parent::$settings_option_field);
-        ?><textarea name="<?php echo parent::$settings_option_field ?>[exclude_paths_wild]" cols="25" rows="3"><?php echo implode("\n", $options['exclude_paths_wild']); ?></textarea><?php
-    }
-    public function sc_wpfmp_settings_main_field_exclude_files() {
-        $options = get_option(parent::$settings_option_field);
-        ?><textarea name="<?php echo parent::$settings_option_field ?>[exclude_files]" cols="25" rows="3"><?php echo implode("\n", $options['exclude_files']); ?></textarea><?php
-    }
-    public function sc_wpfmp_settings_main_field_exclude_paths() {
-        $options = get_option(parent::$settings_option_field);
-        ?><textarea name="<?php echo parent::$settings_option_field ?>[exclude_paths]" cols="25" rows="3"><?php echo implode("\n", $options['exclude_paths']); ?></textarea><?php
+        ?><textarea name="<?php echo parent::$settings_option_field ?>[exclude_paths_files]" cols="60" rows="8"><?php echo implode("\n", $options['exclude_paths_files']); ?></textarea><?php
     }
     public function sc_wpfmp_settings_main_field_file_extension_mode() {
         $options = get_option(parent::$settings_option_field);
