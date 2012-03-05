@@ -4,7 +4,7 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 1.4
+Version: 1.4.1
 Author URI: http://l3rady.com/
 Text Domain: wordpress-file-monitor-plus
 Domain Path: /languages
@@ -158,7 +158,7 @@ if (!class_exists('sc_WordPressFileMonitorPlus')) {
                         $full_dir_file_name = $options['site_root'].$full_file_name;
                         if( isset( $options['exclude_paths_files'] ) ) { // have we got any dirs/files to exclude
                             foreach( $options['exclude_paths_files'] as $exclude ) { // loop through dirs/folders to exclude
-                                if(fnmatch($exclude, $full_dir_file_name)) { // Any matches?
+                                if(fnmatch($exclude, $full_dir_file_name, FNM_NOESCAPE)) { // Any matches?
                                     continue 2; // yes lets break from this foreach and skip below code in while loop
                                 }
                             }
