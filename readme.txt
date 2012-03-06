@@ -38,6 +38,7 @@ This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/pl
 
 *Languages*
 
+- Arabic by [Yaser](http://www.englize.com/) - *Added 06 March 2012*
 - Japanese by [o6asan](http://o6asan.com/BLOG-J/) - *Updated 06 March 2012*
 
 == Installation ==
