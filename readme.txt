@@ -3,7 +3,7 @@ Contributors: l3rady
 Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
-Tested up to: 3.3.1
+Tested up to: 3.3.2
 Stable tag: 1.4.1
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
@@ -41,6 +41,7 @@ This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/pl
 - Arabic by [Yaser](http://www.englize.com/) - *Added 06 March 2012*
 - German by [Johannes Freudendahl](http://freudendahl.net/) - *Added 26 March 2012*
 - Japanese by [o6asan](http://o6asan.com/BLOG-J/) - *Updated 06 March 2012*
+- Russian by [Flector](http://www.wordpressplugins.ru/) - *Added 23 April 2012*
 
 == Installation ==
 
