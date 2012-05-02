@@ -4,7 +4,7 @@ Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
 Tested up to: 3.3.2
-Stable tag: 1.4.1
+Stable tag: 2.0
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -97,6 +97,10 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 4. Email changed files report
 
 == Changelog ==
+
+= 2.0 =
+* Full refactor of code, optimizing, documenting and overall tidy.
+* Proper multi-site support.
 
 = 1.4.1 =
 * fnmatch() wasn't working on Windows. Added `FNM_NOESCAPE` to fnmatch and changed code for fnmatch compatability function to allow `FNM_NOESCAPE`.
