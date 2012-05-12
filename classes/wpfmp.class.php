@@ -134,7 +134,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
             // Check if a scan is being requested externally
             // and that the correct security key is provided
             // and the that the settings allow an external cron.
-            if( ! isset( $_GET['sc_wpfmp_scan'] ) || isset( $_GET['sc_wpfmp_key'] ) || 1 != $_GET['sc_wpfmp_scan'] || $options['security_key'] != $_GET['sc_wpfmp_key'] || "other" != $options['cron_method'] )
+            if( ! isset( $_GET['sc_wpfmp_scan'] ) || ! isset( $_GET['sc_wpfmp_key'] ) || 1 != $_GET['sc_wpfmp_scan'] || $options['security_key'] != $_GET['sc_wpfmp_key'] || "other" != $options['cron_method'] )
                 return;
 
             // Go do scan
