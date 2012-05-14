@@ -4,7 +4,7 @@ Donate link: http://l3rady.com/donate
 Tags: security, files, monitor, plugin
 Requires at least: 3.1
 Tested up to: 3.3.2
-Stable tag: 2.0.1
+Stable tag: 2.1
 
 Monitor files under your WP installation for changes.  When a change occurs, be notified via email. This plugin is a fork of WordPress File Monitor.
 
@@ -61,6 +61,10 @@ This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/pl
 [Enable debuging mode in WordPress]: http://codex.wordpress.org/Editing_wp-config.php#Debug
 [WordPress forums]: http://wordpress.org/tags/wordpress-file-monitor-plus?forum_id=10
 
+= I'm running this plugin on a multi-site. What should I do? =
+
+Install the plugin via the network admin section and network activate the plugin. By doing this the plugin will actually only install and run on the main multi-site site. This way the plugin is silent to all child blogs. To configure and setup the plugin the settings can be found in its usual place on the main site only.
+
 = Only admins can see the admin alert. Is it possible to let other user roles see the admin notice? =
 
 Yes you can, add the following code to your wp-config.php file: `define('SC_WPFMP_ADMIN_ALERT_PERMISSION', 'capability');` and change the capability to a level you want. Please visit [Roles and Capabilities] to see all available capabilities that you can set to.
@@ -77,14 +81,7 @@ Each of the settings 'File Names To Ignore/Dir Names To Ignore/Exact Files To Ig
 
 = What is the 'other cron' method? =
 
-What this does is stops WordPress from running the 'File Check Scan' on the built in cron scheduler and allows you to run it externally. If you know how to setup a cron externally its recommended that you use this method. WordPress by default has a limited number of scan intervals which wont allow you to run the file cron at lets say 2:46AM and then every 3 hours. An external cron gives you greater flexibilty on when to run the file monitor scan.
-
-= I'm getting the error [Got a packet bigger than 'max_allowed_packet' bytes] =
-
-This is due to the scan data being too large to insert into the DB at once. There is one of three things you can do to rectify:
-1. Change the `Data Save Method` to `file` instead of `database`. 
-2. Reduce the number of `File Check Methods` down to one. I'd recommend you just use `Date Modified` or `File Hash`. 
-3. Make a request to your webhost to increase the MySQL `max_allowed_packet` to a larger value.
+What this does is stops WordPress from running the 'File Check Scan' on the built in cron scheduler and allows you to run it externally. If you know how to setup a cron externally its recommended that you use this method. WordPress by default has a limited number of scan intervals which wont allow you to run the file cron at lets say 2:46AM and then every 3 hours. An external cron gives you greater flexibility on when to run the file monitor scan.
 
 = I'm worried that the data files that are created by your plugin are viewable by the public, which poses a security risk. =
 
@@ -99,6 +96,10 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 
 == Changelog ==
 
+= 2.1 =
+* Changed data directory to WordPress uploads dir so that when updating plugin in future you don't lose your old scan data.
+* Dropped the option to allow the choice on where to store data. The save method is always `file` now.
+
 = 2.0.1 =
 * Fixed bug that would stop external cron from working since version 2.0.
 
@@ -108,7 +109,7 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 * Better multisite support.
 
 = 1.4.1 =
-* fnmatch() wasn't working on Windows. Added `FNM_NOESCAPE` to fnmatch and changed code for fnmatch compatability function to allow `FNM_NOESCAPE`.
+* fnmatch() wasn't working on Windows. Added `FNM_NOESCAPE` to fnmatch and changed code for fnmatch compatibility function to allow `FNM_NOESCAPE`.
 
 = 1.4 =
 * Fixed notices
@@ -137,7 +138,7 @@ This plugin ships with a .htaccess file that denies any access to any file in th
 * Added clear admin alert link to the email that's sent.
 
 = 1.1.1 =
-* Added .htaccess file to the data directory just incase your web host doesnt already block access to dot files.
+* Added .htaccess file to the data directory just in case your web host doesn't already block access to dot files.
 * Wrapped wget URL with quotes to make work properly. Thank you Luciano Passuello for spotting this.
 
 = 1.1 =

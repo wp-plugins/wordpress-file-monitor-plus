@@ -39,6 +39,8 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
          * Check if this plugin settings are up to date. Firstly check the version in
          * the DB. If they don't match then load in defaults but don't override values
          * already set. Also this will remove obsolete settings that are not needed.
+         * Since version 2.1 we also check that data files are in the correct upload
+         * directory.
          *
          * @return void
          */
@@ -55,15 +57,17 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             $options = (array) maybe_unserialize( get_option( sc_WordPressFileMonitorPlus::$settings_option_field ) );
 
             // Are we before 1.3? If so we need to do a conversion process to 1.4
-            if( isset( $current_ver ) && ( $current_ver <= 1.3 ) )
+            if( isset( $current_ver ) && ( $current_ver <= 1.4 ) )
                 $options = self::update_settings_pre_1_4_to_1_4( $options );
+
+            if( isset( $current_ver ) && ( $current_ver <= 2.1 ) )
+                self::update_settings_pre_2_1_to_2_1();
 
             // Default setting values for WPFMP
             $defaults = array(
                 'cron_method' => 'wordpress', // Cron method to be used for scheduling scans
                 'file_check_interval' => 'daily', // How often should the cron run
                 'notify_by_email' => 1, // Do we want to be notified by email when there is a file change?
-                'data_save' => 'database', // Where to save scan data and admin alert message
                 'from_address' => get_option( 'admin_email' ), // Email address the notification comes from
                 'notify_address' => get_option( 'admin_email' ), // Email address the notification is sent to
                 'site_root' => realpath( ABSPATH ), // The file check path to start checking files from
@@ -75,7 +79,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 ),
                 'display_admin_alert' => 1, // Do we allow the plugin to notify us when there is a change in the admin area?
                 'is_admin_alert' => 0, // Is there a live admin alert?
-                'security_key' => sha1( microtime( true ) . mt_rand( 10000,90000 ) ), // Generate a random key to be used for Other Cron Method
+                'security_key' => sha1( microtime( true ) . mt_rand( 10000, 90000 ) ), // Generate a random key to be used for Other Cron Method
                 // The security key is only shown to the admin and has to be used for triggering a manual scan via an external cron.
                 // This is to stop non admin users from being able to trigger the cron and potentially abuse server resources.
                 'file_extension_mode' => 0, // 0 = Disabled, 1 = ignore below extensions, 2 = only scan below extensions.
@@ -88,9 +92,23 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             // Merge current settings with defaults. Basically adding any new settings with defaults that we don't have.
             $options = array_merge( $defaults, $options );
 
+            // Clear any previous alert that might be in DB as new plugin settings
+            $options['is_admin_alert'] = 0;
+
             // Update settings and version number
             update_option( sc_WordPressFileMonitorPlus::$settings_option_field, $options ); // update settings
             update_option( sc_WordPressFileMonitorPlus::$settings_option_field_ver, sc_WordPressFileMonitorPlus::$settings_option_field_current_ver ); // update settings version
+
+            // Check that data files exist
+            if( file_exists( SC_WPFMP_FILE_SCAN_DATA ) && file_exists( SC_WPFMP_FILE_ALERT_CONTENT ) )
+                return;
+
+            // Check dir exists, if not make it.
+            if( ! is_dir( SC_WPFMP_DATA_FOLDER ) )
+                mkdir( SC_WPFMP_DATA_FOLDER );
+
+            // Files don't exist so copy them across.
+            self::xcopy( SC_WPFMP_DATA_FOLDER_OLD, SC_WPFMP_DATA_FOLDER );
         }
 
 
@@ -105,7 +123,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
         * @param array $options
         * @return array $options
         */
-        private function update_settings_pre_1_4_to_1_4( $options )
+        static private function update_settings_pre_1_4_to_1_4( $options )
         {
             $options['exclude_paths_files'] = array();
 
@@ -134,6 +152,16 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             }
 
             return $options;
+        }
+
+
+        /**
+         * Version 2.1 no longer uses DB store for data and alert, so do a little clean up.
+         */
+        static private function update_settings_pre_2_1_to_2_1()
+        {
+            delete_option( "sc_wpfmp_scan_data" );
+            delete_option( "sc_wpfmp_admin_alert_content" );
         }
 
 
@@ -217,7 +245,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
 
                 // View admin alert?
                 case "sc_wpfmp_view_alert":
-                    $alert_content = sc_WordPressFileMonitorPlus::getPutAlertContent( "get" );
+                    $alert_content = sc_WordPressFileMonitorPlus::getPutAlertContent();
                     die( $alert_content );
                 break;
 
@@ -290,7 +318,6 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             add_settings_section( "sc_wpfmp_settings_main", __( "Settings", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_text" ), "wordpress-file-monitor-plus" );
             add_settings_field( "sc_wpfmp_settings_main_cron_method", __( "Cron Method", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_cron_method" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_file_check_interval", __( "File Check Interval", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_file_check_interval" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
-            add_settings_field( "sc_wpfmp_settings_main_data_save", __( "Data Save Method", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_data_save" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_notify_by_email", __( "Notify By Email", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_notify_by_email" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_from_address", __( "From Email Address", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_from_address" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_notify_address", __( "Notify Email Address", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_notify_address" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
@@ -325,11 +352,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             {
                 add_settings_error( "sc_wpfmp_settings_main_file_check_interval", "sc_wpfmp_settings_main_file_check_interval_error", __( "Invalid file check interval selected", "wordpress-file-monitor-plus" ), "error" );
             }
-            
-            if( in_array( $input['data_save'], array( "database", "file" ) ) )
-                $valid['data_save'] = $input['data_save'];
-            else
-                add_settings_error( "sc_wpfmp_settings_main_data_save", "sc_wpfmp_settings_main_data_save_error", __( "Invalid data save method selected", "wordpress-file-monitor-plus" ), "error" );
+
             
             $sanitized_notify_by_email = absint($input['notify_by_email']);
             
@@ -415,18 +438,6 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 <option value="<?php echo sc_WordPressFileMonitorPlus::$frequency_intervals[1]; ?>" <?php selected( $options['file_check_interval'], sc_WordPressFileMonitorPlus::$frequency_intervals[1] ); ?>><?php _e( "Twice Daily", "wordpress-file-monitor-plus" ); ?></option>
                 <option value="<?php echo sc_WordPressFileMonitorPlus::$frequency_intervals[2]; ?>" <?php selected( $options['file_check_interval'], sc_WordPressFileMonitorPlus::$frequency_intervals[2] ); ?>><?php _e( "Daily", "wordpress-file-monitor-plus" ); ?></option>
                 <option value="<?php echo sc_WordPressFileMonitorPlus::$frequency_intervals[3]; ?>" <?php selected( $options['file_check_interval'], sc_WordPressFileMonitorPlus::$frequency_intervals[3] ); ?>><?php _e( "Manual", "wordpress-file-monitor-plus" ); ?></option>
-            </select>
-            <?php
-        }
-        
-        
-        static public function sc_wpfmp_settings_main_field_data_save()
-        {
-            $options = get_option( sc_WordPressFileMonitorPlus::$settings_option_field );
-            ?>
-            <select name="<?php echo sc_WordPressFileMonitorPlus::$settings_option_field ?>[data_save]">
-                <option value="database" <?php selected( $options['data_save'], "database" ); ?>><?php _e( "Database", "wordpress-file-monitor-plus" ); ?></option>
-                <option value="file" <?php selected( $options['data_save'], "file" ); ?>><?php _e( "File", "wordpress-file-monitor-plus" ); ?></option>
             </select>
             <?php
         }
@@ -560,6 +571,31 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             $output = (array) explode( "|", $output ); // Split into array
             $output = array_filter( $output ); // remove empty entries from array
             return $output;
+        }
+
+
+        /**
+         * Recursively copy a folder
+         *
+         * @param string $src Source folder
+         * @param string $dest Destination folder
+         */
+        static public function xcopy( $src, $dest )
+        {
+            foreach( scandir( $src ) as $file )
+            {
+                if ( '.' == $file || '..' == $file || ! is_readable( $src . DIRECTORY_SEPARATOR . $file ) )
+                    continue;
+
+                if ( is_dir( $file ) )
+                {
+                    mkdir( $dest . DIRECTORY_SEPARATOR . $file );
+                    self::xcopy( $src . DIRECTORY_SEPARATOR . $file, $dest . DIRECTORY_SEPARATOR . $file );
+                } else
+                {
+                    copy( $src . DIRECTORY_SEPARATOR . $file, $dest . DIRECTORY_SEPARATOR . $file );
+                }
+            }
         }
     }
 }

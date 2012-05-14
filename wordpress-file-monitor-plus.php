@@ -4,7 +4,7 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 2.0.1
+Version: 2.1
 Author URI: http://l3rady.com/
 Text Domain: wordpress-file-monitor-plus
 Domain Path: /languages
@@ -35,9 +35,13 @@ global $current_blog;
 define( 'SC_WPFMP_PLUGIN_FILE', __FILE__ );
 define( 'SC_WPFMP_PLUGIN_FOLDER', dirname( SC_WPFMP_PLUGIN_FILE ) );
 define( 'SC_WPFMP_CLASSES_FOLDER', SC_WPFMP_PLUGIN_FOLDER . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR );
-define( 'SC_WPFMP_DATA_FOLDER', SC_WPFMP_PLUGIN_FOLDER . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR );
 define( 'SC_WPFMP_FUNCTIONS_FOLDER', SC_WPFMP_PLUGIN_FOLDER . DIRECTORY_SEPARATOR . 'functions' . DIRECTORY_SEPARATOR );
 
+// Set data directory
+$uploads = wp_upload_dir();
+$uploads['basedir'] = str_replace( array('\\', '/'), DIRECTORY_SEPARATOR, $uploads['basedir'] );
+define( 'SC_WPFMP_DATA_FOLDER', $uploads['basedir'] . DIRECTORY_SEPARATOR . 'WPFMP_DATA' . DIRECTORY_SEPARATOR );
+define( 'SC_WPFMP_DATA_FOLDER_OLD', SC_WPFMP_PLUGIN_FOLDER . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR );
 define( 'SC_WPFMP_FILE_SCAN_DATA', SC_WPFMP_DATA_FOLDER . '.sc_wpfmp_scan_data' );
 define( 'SC_WPFMP_FILE_ALERT_CONTENT', SC_WPFMP_DATA_FOLDER . '.sc_wpfmp_admin_alert_content' );
 
@@ -61,12 +65,5 @@ if( ! is_multisite() || ( is_multisite() && $current_blog->blog_id == BLOG_ID_CU
 {
     sc_WordPressFileMonitorPlus::init();
     sc_WordPressFileMonitorPlusSettings::init();
-
-    // If we are multisite then load in extra stuff
-    if( is_multisite() )
-    {
-        require SC_WPFMP_CLASSES_FOLDER . 'wpfmp.multisite.class.php';
-        sc_WordPressFileMonitorPlusMultiSite::init();
-    }
 }
 ?>

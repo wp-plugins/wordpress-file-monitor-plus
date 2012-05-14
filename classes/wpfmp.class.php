@@ -26,7 +26,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
     {
         static public $settings_option_field = "sc_wpfmp_settings"; // Option name for settings
         static public $settings_option_field_ver = "sc_wpfmp_settings_ver"; // Option name for settings version
-        static public $settings_option_field_current_ver = "1.4"; // Current settings version
+        static public $settings_option_field_current_ver = "2.1"; // Current settings version
         static public $cron_name = "sc_wpfmp_scan"; // Name of cron
         static public $frequency_intervals = array("hourly", "twicedaily", "daily", "manual"); // What cron schedules are available
 
@@ -155,7 +155,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
             $options = get_option( self::$settings_option_field ); // Get settings
 
             // Get old data from DB/file
-            $oldScanData = self::getPutScanData( "get" );
+            $oldScanData = self::getPutScanData();
 
             // Get new data by scanning
             $newScanData = (array) self::scan_dirs();
@@ -545,34 +545,22 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
         * Function deals with getting and putting scan data to and from DB or FILE
         *
         * @param string $getorput "get" to get data "put" to put data
-        * @param array $data if putting data this should contain array of new scan data
-        * @return array $data if getting data this should contain array of old scan data
+        * @param string $data if putting data this should contain array of new scan data
+        * @return array|string $data if getting data this should contain array of old scan data
         */
-        static public function getPutScanData( $getorput, $data = NULL )
+        static public function getPutScanData( $getorput = "get", $data = "" )
         {
-            $options = get_option( self::$settings_option_field ); // Get settings
+            if( "get" == $getorput )
+            {
+                if( file_exists( SC_WPFMP_FILE_SCAN_DATA ) )
+                    return maybe_unserialize( file_get_contents( SC_WPFMP_FILE_SCAN_DATA ) );
 
-            // Is file save method file or DB
-            if( "file" == $options['data_save'] )
-            {
-                if( "get" == $getorput )
-                {
-                    if( file_exists( SC_WPFMP_FILE_SCAN_DATA ) )
-                        return maybe_unserialize( file_get_contents( SC_WPFMP_FILE_SCAN_DATA ) );
-                    else
-                        return NULL;
-                } else
-                {
-                    file_put_contents( SC_WPFMP_FILE_SCAN_DATA, maybe_serialize( $data ) );
-                }
-            } else
-            {
-                if( "get" == $getorput )
-                    return maybe_unserialize( get_option( 'sc_wpfmp_scan_data' ) );
-                else
-                    update_option( 'sc_wpfmp_scan_data', maybe_serialize( $data ) );
+                return $data;
             }
-            return array();
+
+            file_put_contents( SC_WPFMP_FILE_SCAN_DATA, maybe_serialize( $data ) );
+
+            return $data;
         }
 
 
@@ -583,30 +571,18 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
         * @param string $data if putting data this should contain alert data
         * @return string $data if getting data this should contain alert data
         */
-        static public function getPutAlertContent( $getorput, $data = "" )
+        static public function getPutAlertContent( $getorput = "get", $data = "" )
         {
-            $options = get_option( self::$settings_option_field ); // Get settings
+            if( "get" == $getorput )
+            {
+                if( file_exists( SC_WPFMP_FILE_ALERT_CONTENT ) )
+                    return file_get_contents( SC_WPFMP_FILE_ALERT_CONTENT );
 
-            // Is file save method file or DB
-            if( "file" == $options['data_save'] )
-            {
-                if( "get" == $getorput )
-                {
-                    if( file_exists( SC_WPFMP_FILE_ALERT_CONTENT ) )
-                        return file_get_contents( SC_WPFMP_FILE_ALERT_CONTENT );
-                    else
-                        return "";
-                } else
-                {
-                    file_put_contents( SC_WPFMP_FILE_ALERT_CONTENT, $data );
-                }
-            } else
-            {
-                if( "get" == $getorput )
-                    return get_option( 'sc_wpfmp_admin_alert_content' );
-                else
-                    update_option( 'sc_wpfmp_admin_alert_content', $data );
+                return "";
             }
+
+            file_put_contents( SC_WPFMP_FILE_ALERT_CONTENT, $data );
+
             return $data;
         }
 
