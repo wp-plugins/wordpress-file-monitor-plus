@@ -19,5 +19,6 @@
 if( ! defined( 'WP_UNINSTALL_PLUGIN' ) )
 	exit();	
 
-delete_option( "sc_wpfmp_settings" );
-delete_option( "sc_wpfmp_settings_ver" );
+require "wordpress-file-monitor-plus.php";
+
+sc_WordPressFileMonitorPlusSettings::uninstall();

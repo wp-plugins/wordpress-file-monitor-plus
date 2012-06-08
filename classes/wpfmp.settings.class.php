@@ -61,7 +61,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 $options = self::update_settings_pre_1_4_to_1_4( $options );
 
             if( isset( $current_ver ) && ( $current_ver <= 2.1 ) )
-                self::update_settings_pre_2_1_to_2_1();
+                $options = self::update_settings_pre_2_1_to_2_1( $options );
 
             // Default setting values for WPFMP
             $defaults = array(
@@ -83,7 +83,8 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 // The security key is only shown to the admin and has to be used for triggering a manual scan via an external cron.
                 // This is to stop non admin users from being able to trigger the cron and potentially abuse server resources.
                 'file_extension_mode' => 0, // 0 = Disabled, 1 = ignore below extensions, 2 = only scan below extensions.
-                'file_extensions' => array('jpg', 'jpeg', 'jpe', 'gif', 'png', 'bmp', 'tif', 'tiff', 'ico') // List of extensions separated by pipe.
+                'file_extensions' => array('jpg', 'jpeg', 'jpe', 'gif', 'png', 'bmp', 'tif', 'tiff', 'ico'), // List of extensions separated by pipe.
+                'last_scan_time' => false
             );
 
             // Intersect current options with defaults. Basically removing settings that are obsolete
@@ -91,9 +92,6 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
 
             // Merge current settings with defaults. Basically adding any new settings with defaults that we don't have.
             $options = array_merge( $defaults, $options );
-
-            // Clear any previous alert that might be in DB as new plugin settings
-            $options['is_admin_alert'] = 0;
 
             // Update settings and version number
             update_option( sc_WordPressFileMonitorPlus::$settings_option_field, $options ); // update settings
@@ -157,11 +155,21 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
 
         /**
          * Version 2.1 no longer uses DB store for data and alert, so do a little clean up.
+         * Also clear admin alert as the new data layout changed would break an existing alert.
+         *
+         * @param array $options
+         * @return array $options
          */
-        static private function update_settings_pre_2_1_to_2_1()
+        static private function update_settings_pre_2_1_to_2_1( $options )
         {
+
+            // Clear any previous alert that might be in DB as new plugin settings
+            $options['is_admin_alert'] = 0;
+
             delete_option( "sc_wpfmp_scan_data" );
             delete_option( "sc_wpfmp_admin_alert_content" );
+
+            return $options;
         }
 
 
@@ -232,7 +240,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 case "sc_wpfmp_reset_settings":
                     delete_option( sc_WordPressFileMonitorPlus::$settings_option_field );
                     delete_option( sc_WordPressFileMonitorPlus::$settings_option_field_ver );
-                    self::settingsUpToDate();
+                    self::settings_up_to_date();
                     add_settings_error( "sc_wpfmp_settings_main", "sc_wpfmp_settings_main_error", __( "Settings reset", "wordpress-file-monitor-plus" ), "updated" );
                 break;
 
@@ -291,10 +299,23 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
          */
         static public function settings_page()
         {
+            $options = get_option( sc_WordPressFileMonitorPlus::$settings_option_field ); // Get settings
             ?>
             <div class="wrap">
                 <?php screen_icon('options-general'); ?>
                 <h2><?php _e( "WordPress File Monitor Plus", "wordpress-file-monitor-plus" ); ?></h2>
+                <p>
+                    <span class="description">
+                    <?php
+                    if( false === $options["last_scan_time"] )
+                        $scan_date = __("Never", "wordpress-file-monitor-plus");
+                    else
+                        $scan_date = apply_filters( "sc_wpfmp_format_file_modified_time", NULL, $options["last_scan_time"] );
+
+                    echo sprintf( __("Last scanned: %s", "wordpress-file-monitor-plus"), $scan_date );
+                    ?>
+                    </span>
+                </p>
                 <form action="options.php" method="post">
                     <?php
                     $_SERVER['REQUEST_URI'] = remove_query_arg( array( 'sc_wpfmp_action', 'sc_wpfmp_scan', 'sc_wpfmp_reset_settings', 'sc_wpfmp_clear_admin_alert', 'sc_wpfmp_clear_admin_alert' ) );
@@ -302,9 +323,10 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                     do_settings_sections( "wordpress-file-monitor-plus" );
                     ?>
                     <p class="submit">
-                      <?php submit_button( __( "Save changes", "wordpress-file-monitor-plus" ), "primary", "submit", false ); ?>
-                      <a class="button-secondary" href="<?php echo admin_url( "options-general.php?page=wordpress-file-monitor-plus&sc_wpfmp_action=sc_wpfmp_scan" ); ?>"><?php _e( "Manual scan", "wordpress-file-monitor-plus" ); ?></a>
-                      <a class="button-secondary" href="<?php echo admin_url( "options-general.php?page=wordpress-file-monitor-plus&sc_wpfmp_action=sc_wpfmp_reset_settings" ); ?>"><?php _e( "Reset settings to defaults", "wordpress-file-monitor-plus" ); ?></a>
+                        <?php submit_button( __( "Save changes", "wordpress-file-monitor-plus" ), "primary", "submit", false ); ?>
+                        <input class="button" name="submitwithemail" type="submit" value="<?php _e("Save settings with test email", "wordpress-file-monitor-plus"); ?>" />
+                        <a class="button-secondary" href="<?php echo admin_url( "options-general.php?page=wordpress-file-monitor-plus&sc_wpfmp_action=sc_wpfmp_scan" ); ?>"><?php _e( "Manual scan", "wordpress-file-monitor-plus" ); ?></a>
+                        <a class="button-secondary" href="<?php echo admin_url( "options-general.php?page=wordpress-file-monitor-plus&sc_wpfmp_action=sc_wpfmp_reset_settings" ); ?>"><?php _e( "Reset settings to defaults", "wordpress-file-monitor-plus" ); ?></a>
                     </p>
                 </form>
             </div>
@@ -319,8 +341,8 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
             add_settings_field( "sc_wpfmp_settings_main_cron_method", __( "Cron Method", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_cron_method" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_file_check_interval", __( "File Check Interval", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_file_check_interval" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_notify_by_email", __( "Notify By Email", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_notify_by_email" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
-            add_settings_field( "sc_wpfmp_settings_main_from_address", __( "From Email Address", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_from_address" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_notify_address", __( "Notify Email Address", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_notify_address" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
+            add_settings_field( "sc_wpfmp_settings_main_from_address", __( "From Email Address", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_from_address" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_display_admin_alert", __( "Admin Alert", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_display_admin_alert" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_file_check_method", __( "File Check Method", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_file_check_method" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
             add_settings_field( "sc_wpfmp_settings_main_site_root", __( "File Check Root", "wordpress-file-monitor-plus" ), array( __CLASS__, "sc_wpfmp_settings_main_field_site_root" ), "wordpress-file-monitor-plus", "sc_wpfmp_settings_main" );
@@ -338,12 +360,10 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 $valid['cron_method'] = $input['cron_method'];
             else
                 add_settings_error( "sc_wpfmp_settings_main_cron_method", "sc_wpfmp_settings_main_cron_method_error", __( "Invalid cron method selected", "wordpress-file-monitor-plus" ), "error" );
-            
-                
+
             if("other" == $valid['cron_method'])
                 $input['file_check_interval'] = "manual";
-            
-            
+
             if( in_array( $input['file_check_interval'], sc_WordPressFileMonitorPlus::$frequency_intervals ) )
             {
                 $valid['file_check_interval'] = $input['file_check_interval'];
@@ -353,27 +373,42 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 add_settings_error( "sc_wpfmp_settings_main_file_check_interval", "sc_wpfmp_settings_main_file_check_interval_error", __( "Invalid file check interval selected", "wordpress-file-monitor-plus" ), "error" );
             }
 
-            
             $sanitized_notify_by_email = absint($input['notify_by_email']);
             
             if( 1 === $sanitized_notify_by_email || 0 === $sanitized_notify_by_email )
                 $valid['notify_by_email'] = $sanitized_notify_by_email;
             else
                 add_settings_error( "sc_wpfmp_settings_main_notify_by_email", "sc_wpfmp_settings_main_notify_by_email_error", __( "Invalid notify by email selected", "wordpress-file-monitor-plus" ), "error" );
-            
+
+            $emails_to = explode( ",", $input['notify_address'] );
+            if( ! empty( $emails_to ) )
+            {
+                $sanitized_emails = array();
+                $was_error = false;
+                foreach( $emails_to as $email_to )
+                {
+                    $address = sanitize_email( trim( $email_to ) );
+                    if( ! is_email( $address ) )
+                    {
+                        add_settings_error( "sc_wpfmp_settings_main_notify_address", "sc_wpfmp_settings_main_notify_address_error", __( "One or more email to addresses are invalid", "wordpress-file-monitor-plus" ), "error" );
+                        $was_error = true;
+                        break;
+                    }
+                    $sanitized_emails[] = $address;
+                }
+                if( ! $was_error)
+                    $valid['notify_address'] = implode(',', $sanitized_emails);
+            } else
+            {
+                add_settings_error( "sc_wpfmp_settings_main_notify_address", "sc_wpfmp_settings_main_notify_address_error", __( "No email to address entered", "wordpress-file-monitor-plus" ), "error" );
+            }
+
             $sanitized_email_from = sanitize_email($input['from_address']);
             
             if( is_email( $sanitized_email_from ) )
                 $valid['from_address'] = $sanitized_email_from;
             else
                 add_settings_error( "sc_wpfmp_settings_main_from_address", "sc_wpfmp_settings_main_from_address_error", __( "Invalid from email address entered", "wordpress-file-monitor-plus" ), "error" );
-            
-            $sanitized_email_to = sanitize_email($input['notify_address']);
-            
-            if( is_email( $sanitized_email_to ) )
-                $valid['notify_address'] = $sanitized_email_to;
-            else
-                add_settings_error( "sc_wpfmp_settings_main_notify_address", "sc_wpfmp_settings_main_notify_address_error", __( "Invalid notify email address entered", "wordpress-file-monitor-plus" ), "error" );
             
             $sanitized_display_admin_alert = absint($input['display_admin_alert']);
             
@@ -401,11 +436,21 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                 add_settings_error( "sc_wpfmp_settings_main_file_extension_mode", "sc_wpfmp_settings_main_file_extension_mode_error", __( "Invalid file extension mode selected", "wordpress-file-monitor-plus" ), "error" );
             
             $valid['file_extensions'] = self::file_extensions_to_array( $input['file_extensions'] );
-            
+
+            if( isset( $_POST['submitwithemail'] ) )
+                add_filter( 'pre_set_transient_settings_errors', array( __CLASS__, "send_test_email" ) );
+
             return $valid;
         }
-        
-        
+
+
+        static public function send_test_email( $settings_errors )
+        {
+            if( isset( $settings_errors[0]['type'] ) && $settings_errors[0]['type'] == "updated" )
+                sc_WordPressFileMonitorPlus::send_notify_email( __( "This is a test message from WordPress File Monitor Plus.", "wordpress-file-monitor-plus" ) );
+        }
+
+
         static public function sc_wpfmp_settings_main_text()
         {
             return;
@@ -455,17 +500,17 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
         }
 
 
+        static public function sc_wpfmp_settings_main_field_notify_address()
+        {
+            $options = get_option( sc_WordPressFileMonitorPlus::$settings_option_field );
+            ?><input class="regular-text" name="<?php echo sc_WordPressFileMonitorPlus::$settings_option_field ?>[notify_address]" value="<?php echo $options['notify_address']; ?>" />  <span class="description"><?php _e("Separate multiple email address with a comma (,)", "wordpress-file-monitor-plus"); ?></span><?php
+        }
+
+
         static public function sc_wpfmp_settings_main_field_from_address()
         {
             $options = get_option( sc_WordPressFileMonitorPlus::$settings_option_field );
             ?><input class="regular-text" name="<?php echo sc_WordPressFileMonitorPlus::$settings_option_field ?>[from_address]" value="<?php echo $options['from_address']; ?>" /><?php
-        }
-
-
-        static public function sc_wpfmp_settings_main_field_notify_address()
-        {
-            $options = get_option( sc_WordPressFileMonitorPlus::$settings_option_field );
-            ?><input class="regular-text" name="<?php echo sc_WordPressFileMonitorPlus::$settings_option_field ?>[notify_address]" value="<?php echo $options['notify_address']; ?>" /><?php
         }
 
 
@@ -596,6 +641,49 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlusSettings' ) )
                     copy( $src . DIRECTORY_SEPARATOR . $file, $dest . DIRECTORY_SEPARATOR . $file );
                 }
             }
+        }
+
+
+        /**
+         * Delete folder and all its contents
+         *
+         * @param $dir string Directory of folder to be deleted.
+         * @return bool Returns false on none directory passed.
+         */
+        static public function rrmdir( $dir )
+        {
+            if( ! is_dir( $dir ) )
+                return false;
+
+            $objects = scandir( $dir );
+
+            foreach ( $objects as $object )
+            {
+                if( in_array( $object, array( ".", ".." ) ) )
+                    continue;
+
+                if ( is_dir( $dir . DIRECTORY_SEPARATOR . $object ) )
+                    self::rrmdir( $dir. DIRECTORY_SEPARATOR .$object );
+                else
+                    unlink( $dir . DIRECTORY_SEPARATOR . $object );
+            }
+
+            reset( $objects );
+            rmdir( $dir );
+
+            return true;
+        }
+
+
+        /**
+         * Function that runs on uninstall. Called from the uninstall.php file
+         */
+        static public function uninstall()
+        {
+            delete_option( "sc_wpfmp_settings" );
+            delete_option( "sc_wpfmp_settings_ver" );
+
+            self::rrmdir( SC_WPFMP_DATA_FOLDER );
         }
     }
 }

@@ -26,7 +26,7 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
     {
         static public $settings_option_field = "sc_wpfmp_settings"; // Option name for settings
         static public $settings_option_field_ver = "sc_wpfmp_settings_ver"; // Option name for settings version
-        static public $settings_option_field_current_ver = "2.1"; // Current settings version
+        static public $settings_option_field_current_ver = "2.2"; // Current settings version
         static public $cron_name = "sc_wpfmp_scan"; // Name of cron
         static public $frequency_intervals = array("hourly", "twicedaily", "daily", "manual"); // What cron schedules are available
 
@@ -153,6 +153,10 @@ if ( ! class_exists( 'sc_WordPressFileMonitorPlus' ) )
         static public function scan()
         {
             $options = get_option( self::$settings_option_field ); // Get settings
+
+            // Set time of this scan.
+            $options['last_scan_time'] = time();
+            update_option( self::$settings_option_field, $options );
 
             // Get old data from DB/file
             $oldScanData = self::getPutScanData();
