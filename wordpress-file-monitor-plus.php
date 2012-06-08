@@ -4,7 +4,7 @@ Plugin Name: WordPress File Monitor Plus
 Plugin URI: http://l3rady.com/projects/wordpress-file-monitor-plus/
 Description: Monitor your website for added/changed/deleted files
 Author: Scott Cariss
-Version: 2.1
+Version: 2.2
 Author URI: http://l3rady.com/
 Text Domain: wordpress-file-monitor-plus
 Domain Path: /languages
