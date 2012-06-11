@@ -41,7 +41,7 @@ This plugin is a fork of [WordPress File Monitor](http://wordpress.org/extend/pl
 
 - Arabic by [Yaser](http://www.englize.com/) - *Added 06 March 2012*
 - German by [Johannes Freudendahl](http://freudendahl.net/) - *Added 26 March 2012*
-- Japanese by [o6asan](http://o6asan.com/BLOG-J/) - *Updated 06 March 2012*
+- Japanese by [o6asan](http://o6asan.com/BLOG-J/) - *Updated 11 June 2012*
 - Russian by [Flector](http://www.wordpressplugins.ru/) - *Added 23 April 2012*
 
 == Installation ==
